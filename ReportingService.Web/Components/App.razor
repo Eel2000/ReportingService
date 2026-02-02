@@ -5,13 +5,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        sidebar: '#1e1e2f',
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="ReportingService.Web.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
 </head>
 
-<body>
+<body class="bg-gray-50 min-h-screen">
     <Routes />
     <script src="_framework/blazor.web.js"></script>
 </body>

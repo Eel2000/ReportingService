@@ -1,0 +1,522 @@
+@page "/schedules"
+@using System.Text.Json
+@using System.Text
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+
+<PageTitle>Schedules</PageTitle>
+
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Schedules</h1>
+            <p class="mt-1 text-gray-600">Manage your automated report schedules</p>
+        </div>
+        <button @onclick="OpenCreateModal" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Schedule
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+    }
+    else if (errorMessage is not null)
+    {
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="text-red-700">@errorMessage</p>
+            </div>
+            <button @onclick="LoadSchedules" class="mt-3 text-red-600 hover:text-red-800 font-medium text-sm">Try again</button>
+        </div>
+    }
+    else if (schedules.Count == 0)
+    {
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <svg class="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">No schedules yet</h3>
+            <p class="mt-2 text-gray-500">Create your first schedule to start automating reports.</p>
+            <button @onclick="OpenCreateModal" class="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Schedule
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recurrence</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Retention</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach (var schedule in schedules)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-gray-900">@schedule.Name</div>
+                                    @if (!string.IsNullOrEmpty(schedule.Description))
+                                    {
+                                        <div class="text-sm text-gray-500 truncate max-w-xs">@schedule.Description</div>
+                                    }
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(schedule.Type == ScheduleType.Recurring ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800")">
+                                        @schedule.Type
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600">@(schedule.Recurrence?.ToString() ?? "N/A")</td>
+                                <td class="px-6 py-4 text-gray-600">
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        @schedule.SendHour.ToString("00"):@schedule.SendMinute.ToString("00")
+                                    </div>
+                                    <div class="text-xs text-gray-400">@GetDayRange(schedule.StartingDay, schedule.EndingDay)</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        @FormatRetention(schedule.RetentionPeriod)
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-sm">@schedule.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button @onclick="() => OpenEditModal(schedule)" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                        <button @onclick="() => PauseSchedule(schedule.Id)" class="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors" title="Pause">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </button>
+                                        <button @onclick="() => OpenDeleteModal(schedule)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@* Create/Edit Modal *@
+@if (showModal)
+{
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @onclick="CloseModal">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden" @onclick:stopPropagation="true">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-900">@(isEditing ? "Edit Schedule" : "Create New Schedule")</h2>
+                <button @onclick="CloseModal" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="px-6 py-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <EditForm Model="currentSchedule" OnValidSubmit="SaveSchedule" class="space-y-6">
+                    <DataAnnotationsValidator />
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                            <InputText @bind-Value="currentSchedule.Name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" placeholder="Weekly Sales Report" />
+                            <ValidationMessage For="() => currentSchedule.Name" class="text-red-500 text-sm mt-1" />
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <InputTextArea @bind-Value="currentSchedule.Description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" placeholder="Optional description for this schedule..." />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Schedule Type</label>
+                            <InputSelect @bind-Value="currentSchedule.Type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                @foreach (var type in Enum.GetValues<ScheduleType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Recurrence Pattern</label>
+                            <InputSelect @bind-Value="currentSchedule.Recurrence" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                @foreach (var pattern in Enum.GetValues<RecurrencePattern>())
+                                {
+                                    <option value="@pattern">@pattern</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Starting Day</label>
+                            <InputSelect @bind-Value="currentSchedule.StartingDay" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                @for (int i = 0; i <= 6; i++)
+                                {
+                                    <option value="@i">@GetDayName(i)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ending Day</label>
+                            <InputSelect @bind-Value="currentSchedule.EndingDay" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                @for (int i = 0; i <= 6; i++)
+                                {
+                                    <option value="@i">@GetDayName(i)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Send Time</label>
+                            <div class="flex gap-2">
+                                <InputNumber @bind-Value="currentSchedule.SendHour" min="0" max="23" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" placeholder="Hour" />
+                                <span class="flex items-center text-gray-500 font-medium">:</span>
+                                <InputNumber @bind-Value="currentSchedule.SendMinute" min="0" max="59" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" placeholder="Minute" />
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">24-hour format (e.g., 9:00 for 9 AM, 14:30 for 2:30 PM)</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Data Retention</label>
+                            <InputSelect @bind-Value="currentSchedule.RetentionPeriod" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                @foreach (var retention in Enum.GetValues<DataRetention>())
+                                {
+                                    <option value="@retention">@FormatRetention(retention)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    @if (formErrorMessage is not null)
+                    {
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p class="text-red-700">@formErrorMessage</p>
+                        </div>
+                    }
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button type="button" @onclick="CloseModal" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled="@isSaving" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            @if (isSaving)
+                            {
+                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            }
+                            @(isEditing ? "Update Schedule" : "Create Schedule")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Confirmation Modal *@
+@if (showDeleteModal)
+{
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @onclick="CloseDeleteModal">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" @onclick:stopPropagation="true">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Delete Schedule</h3>
+                    <p class="text-gray-500">Are you sure you want to delete "<span class="font-medium">@scheduleToDelete?.Name</span>"?</p>
+                </div>
+            </div>
+            <p class="mt-4 text-sm text-gray-500">This action cannot be undone. The schedule will be permanently removed from the system.</p>
+            <div class="flex justify-end gap-3 mt-6">
+                <button @onclick="CloseDeleteModal" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button @onclick="ConfirmDelete" disabled="@isDeleting" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    @if (isDeleting)
+                    {
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    }
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Schedule> schedules = [];
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? formErrorMessage;
+
+    private bool showModal = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private Schedule currentSchedule = new();
+
+    private bool showDeleteModal = false;
+    private bool isDeleting = false;
+    private Schedule? scheduleToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSchedules();
+    }
+
+    private async Task LoadSchedules()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await ApiClient.HttpClient.GetAsync("/api/schedules");
+            if (response.IsSuccessStatusCode)
+            {
+                schedules = await response.Content.ReadFromJsonAsync<List<Schedule>>() ?? [];
+            }
+            else
+            {
+                errorMessage = "Failed to load schedules. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading schedules: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        currentSchedule = new Schedule();
+        isEditing = false;
+        formErrorMessage = null;
+        showModal = true;
+    }
+
+    private void OpenEditModal(Schedule schedule)
+    {
+        currentSchedule = new Schedule
+        {
+            Id = schedule.Id,
+            Name = schedule.Name,
+            Description = schedule.Description,
+            Type = schedule.Type,
+            Recurrence = schedule.Recurrence,
+            StartingDay = schedule.StartingDay,
+            EndingDay = schedule.EndingDay,
+            SendHour = schedule.SendHour,
+            SendMinute = schedule.SendMinute,
+            RetentionPeriod = schedule.RetentionPeriod
+        };
+        isEditing = true;
+        formErrorMessage = null;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentSchedule = new();
+        formErrorMessage = null;
+    }
+
+    private async Task SaveSchedule()
+    {
+        isSaving = true;
+        formErrorMessage = null;
+
+        try
+        {
+            HttpResponseMessage response;
+            var json = JsonSerializer.Serialize(currentSchedule);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            if (isEditing)
+            {
+                response = await ApiClient.HttpClient.PutAsync($"/api/schedules/{currentSchedule.Id}", content);
+            }
+            else
+            {
+                response = await ApiClient.HttpClient.PostAsync("/api/schedules", content);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                CloseModal();
+                await LoadSchedules();
+            }
+            else
+            {
+                formErrorMessage = "Failed to save schedule. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            formErrorMessage = $"Error saving schedule: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void OpenDeleteModal(Schedule schedule)
+    {
+        scheduleToDelete = schedule;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        scheduleToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (scheduleToDelete is null) return;
+
+        isDeleting = true;
+
+        try
+        {
+            var response = await ApiClient.HttpClient.DeleteAsync($"/api/schedules/{scheduleToDelete.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                CloseDeleteModal();
+                await LoadSchedules();
+            }
+        }
+        catch
+        {
+            // Handle error
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task PauseSchedule(Guid id)
+    {
+        try
+        {
+            await ApiClient.HttpClient.PostAsync($"/api/schedules/{id}/pause", null);
+            await LoadSchedules();
+        }
+        catch
+        {
+            // Handle error
+        }
+    }
+
+    private static string GetDayName(int day) => day switch
+    {
+        0 => "Sunday",
+        1 => "Monday",
+        2 => "Tuesday",
+        3 => "Wednesday",
+        4 => "Thursday",
+        5 => "Friday",
+        6 => "Saturday",
+        _ => "Unknown"
+    };
+
+    private static string GetDayRange(int start, int end)
+    {
+        if (start == end) return GetDayName(start);
+        return $"{GetDayName(start)[..3]} - {GetDayName(end)[..3]}";
+    }
+
+    private static string FormatRetention(DataRetention retention) => retention switch
+    {
+        DataRetention.CurrentDay => "Current Day",
+        DataRetention.PreviousDay => "Previous Day",
+        DataRetention.PreviousWeek => "Previous Week",
+        DataRetention.PreviousMonth => "Previous Month",
+        DataRetention.None => "None",
+        _ => retention.ToString()
+    };
+
+    public class Schedule
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public ScheduleType Type { get; set; } = ScheduleType.Recurring;
+        public int StartingDay { get; set; } = 1;
+        public int EndingDay { get; set; } = 5;
+        public int SendHour { get; set; } = 9;
+        public int SendMinute { get; set; } = 0;
+        public RecurrencePattern? Recurrence { get; set; } = RecurrencePattern.Daily;
+        public DataRetention RetentionPeriod { get; set; } = DataRetention.CurrentDay;
+        public string? Description { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
+    }
+
+    public enum DataRetention
+    {
+        CurrentDay,
+        PreviousDay,
+        PreviousWeek,
+        PreviousMonth,
+        None
+    }
+
+    public enum ScheduleType
+    {
+        OneTime,
+        Recurring
+    }
+
+    public enum RecurrencePattern
+    {
+        Daily,
+        Weekly,
+        Monthly,
+        Yearly
+    }
+}

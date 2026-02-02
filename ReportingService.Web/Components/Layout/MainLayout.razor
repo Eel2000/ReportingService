@@ -1,22 +1,27 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <h2>Reporting Service</h2>
+<div class="flex min-h-screen">
+    <nav class="w-64 bg-sidebar text-white flex-shrink-0">
+        <div class="p-6 border-b border-gray-700">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Reporting Service
+            </h2>
         </div>
         <NavMenu />
     </nav>
 
-    <main>
-        <article class="content px-4">
+    <main class="flex-1 p-8">
+        <article class="max-w-7xl mx-auto">
             @Body
         </article>
     </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">??</span>
+<div id="blazor-error-ui" data-nosnippet class="fixed bottom-0 left-0 right-0 bg-yellow-100 border-t border-yellow-400 p-4 hidden z-50">
+    <span class="text-yellow-800">An unhandled error has occurred.</span>
+    <a href="." class="reload text-blue-600 hover:underline ml-2">Reload</a>
+    <span class="dismiss absolute right-4 top-4 cursor-pointer text-yellow-800 hover:text-yellow-900">?</span>
 </div>
