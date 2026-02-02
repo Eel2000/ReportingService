@@ -56,7 +56,7 @@ try
             // PostgreSQL configuration
             store.UsePostgres(db =>
             {
-                db.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+                db.ConnectionString = builder.Configuration.GetConnectionString("reportingdb")!;
                 db.TablePrefix = "qrtz_";
             });
 
