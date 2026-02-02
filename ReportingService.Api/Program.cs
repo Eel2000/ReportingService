@@ -21,6 +21,8 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.AddServiceDefaults();
+
     // Use Serilog for logging
     builder.Host.UseSerilog();
 
@@ -35,9 +37,8 @@ try
     // Add Carter for minimal API endpoints
     builder.Services.AddCarter();
 
-    // Add PostgreSQL DbContext
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    // Add PostgreSQL DbContext with Aspire integration
+    builder.AddNpgsqlDbContext<ApplicationDbContext>("reportingdb");
 
     // Add Quartz scheduler with PostgreSQL persistence
     builder.Services.AddQuartz(q =>
@@ -98,6 +99,7 @@ try
 
     var app = builder.Build();
 
+    app.MapDefaultEndpoints();
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
